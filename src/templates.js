@@ -92,14 +92,14 @@ export const templates = {
   birthdayWish: ({ name, gymName = 'Arceus Fitness' }) => {
     return `🎂🎉 *HAPPY BIRTHDAY ${name.toUpperCase()}!* 🎈🎁
 
-On behalf of the entire *${gymName} Family & Trainers*, we wish you a phenomenal birthday!
+On behalf of the entire *${gymName} Family & Trainers*, we wish you a fantastic birthday!
 
 May this year bring you unstoppable health, peak strength, and mind-blowing gains! 💪
 
-🎁 *Special Birthday Gift:*
-Enjoy a *FREE Protein Shake* or *₹200 Birthday Discount* on your next renewal! Just show this message at the front desk.
+🔥 *Special Birthday Perk:*
+Claim a *Special Birthday Discount* on your next membership renewal! Just mention this message at the front desk.
 
-Have an absolute blast today bro! 🔥`;
+Have a powerful workout and a great year ahead bro! 🚀`;
   },
 
   // 2. Attendance Streak Milestones
