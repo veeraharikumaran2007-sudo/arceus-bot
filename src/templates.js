@@ -3,6 +3,14 @@
  * Contains Birthday wishes, Streak milestones, Inactivity reminders, Diet tips, Workout splits, and Fees triggers.
  */
 
+export function formatPhoneNumber(phone) {
+  let cleaned = String(phone).replace(/\D/g, '');
+  if (cleaned.length === 10) {
+    cleaned = '91' + cleaned;
+  }
+  return cleaned.endsWith('@s.whatsapp.net') ? cleaned : `${cleaned}@s.whatsapp.net`;
+}
+
 // Daily Motivational Quotes Bank (Rotates daily so messages are never repetitive!)
 export const MOTIVATION_BANK = [
   "No pain, no gain! Push past your limits today! 💪",
