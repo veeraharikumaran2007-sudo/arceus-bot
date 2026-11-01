@@ -20,8 +20,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve Static Frontend Dashboard
-app.use(express.static(path.join(__dirname, 'src/public')));
+// Root health check (Pure JSON API - Zero Website)
+app.get('/', (req, res) => {
+  res.json({
+    service: "Arceus Bot Engine",
+    status: "ONLINE",
+    mode: "Headless Background Microservice",
+    version: "1.0.0"
+  });
+});
 
 // Mount API routes
 app.use('/api', apiRouter);
