@@ -52,7 +52,7 @@ export class WhatsAppService {
 
         if (text) {
           console.log(`📩 Incoming message from ${senderPhone}: "${text}"`);
-          const reply = handleIncomingCommand(senderPhone, text);
+          const reply = await handleIncomingCommand(senderPhone, text);
           if (reply) {
             await this.sock.sendMessage(senderJid, { text: reply });
             console.log(`🤖 Auto-replied to ${senderPhone}`);
