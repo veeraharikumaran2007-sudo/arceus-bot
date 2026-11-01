@@ -21,6 +21,31 @@ router.get('/qr', (req, res) => {
   res.json({ connected: false, qrDataUrl: status.qrDataUrl });
 });
 
+// 2b. Simple Visual QR Scanner for Mobile Browser
+router.get('/scan', (req, res) => {
+  const status = waService.getStatus();
+  if (status.status === 'connected') {
+    return res.send(`
+      <!DOCTYPE html><html><body style="background:#090a0f;color:#10b981;font-family:sans-serif;display:flex;flex-direction:column;justify-content:center;align-items:center;height:90vh;">
+        <h1 style="font-size:48px;">✅</h1>
+        <h2>WhatsApp Successfully Connected!</h2>
+        <p style="color:#9ca3af;">Phone: +${status.connectedNumber}</p>
+      </body></html>
+    `);
+  }
+  if (!status.qrDataUrl) {
+    return res.send(`<!DOCTYPE html><html><body style="background:#090a0f;color:#fff;font-family:sans-serif;text-align:center;padding-top:100px;"><h2>Generating QR... Please refresh in 3 seconds.</h2></body></html>`);
+  }
+  res.send(`
+    <!DOCTYPE html><html><body style="background:#090a0f;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;justify-content:center;align-items:center;height:90vh;">
+      <h2 style="margin-bottom:15px;">Scan with Gym WhatsApp</h2>
+      <p style="color:#9ca3af;margin-bottom:20px;font-size:14px;">WhatsApp ➔ Linked Devices ➔ Link a Device</p>
+      <img src="${status.qrDataUrl}" style="width:260px;height:260px;background:#fff;padding:12px;border-radius:16px;box-shadow:0 0 30px rgba(255,255,255,0.1);"/>
+      <script>setTimeout(() => location.reload(), 20000);</script>
+    </body></html>
+  `);
+});
+
 // 3. Biometric Check-in Attendance DM
 router.post('/send-checkin', async (req, res) => {
   try {
