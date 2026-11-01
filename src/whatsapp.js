@@ -5,6 +5,7 @@ import qrcodeTerminal from 'qrcode-terminal';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { formatPhoneNumber } from './templates.js';
+import { handleIncomingCommand } from './commands.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,29 @@ export class WhatsAppService {
     this.connectionStatus = 'connecting';
 
     this.sock.ev.on('creds.update', saveCreds);
+
+    // Listen for incoming messages from gym members (Interactive 2-Way Commands)
+    this.sock.ev.on('messages.upsert', async (chatUpdate) => {
+      try {
+        const msg = chatUpdate.messages[0];
+        if (!msg.message || msg.key.fromMe) return;
+
+        const senderJid = msg.key.remoteJid;
+        const senderPhone = senderJid.split('@')[0];
+        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+
+        if (text) {
+          console.log(`📩 Incoming message from ${senderPhone}: "${text}"`);
+          const reply = handleIncomingCommand(senderPhone, text);
+          if (reply) {
+            await this.sock.sendMessage(senderJid, { text: reply });
+            console.log(`🤖 Auto-replied to ${senderPhone}`);
+          }
+        }
+      } catch (err) {
+        console.error('Error handling incoming WhatsApp message:', err);
+      }
+    });
 
     this.sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;

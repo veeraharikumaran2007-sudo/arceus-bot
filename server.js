@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { waService } from './src/whatsapp.js';
 import { router as apiRouter } from './src/routes.js';
+import { scheduler } from './src/cron.js';
 
 dotenv.config();
 
@@ -25,19 +26,22 @@ app.use(express.static(path.join(__dirname, 'src/public')));
 // Mount API routes
 app.use('/api', apiRouter);
 
-// Start WhatsApp Bot & Server
+// Start WhatsApp Bot, Scheduler & Server
 async function startServer() {
   console.log('----------------------------------------------------');
-  console.log('⚡ Starting Arceus Bot Engine...');
+  console.log('⚡ Starting Arceus Bot Engine (WhatsApp & Gym Automation)...');
   console.log('----------------------------------------------------');
 
   try {
-    // Initialize WhatsApp connection
+    // 1. Initialize WhatsApp connection
     await waService.init();
 
+    // 2. Start automated scheduler (Birthdays, Expiry Reminders)
+    scheduler.start();
+
+    // 3. Start API Server
     app.listen(PORT, () => {
       console.log(`\n🚀 Arceus Bot Server is LIVE!`);
-      console.log(`🔗 Dashboard: http://localhost:${PORT}`);
       console.log(`🔌 API Base:  http://localhost:${PORT}/api\n`);
       console.log('Press Ctrl+C to stop.');
     });
