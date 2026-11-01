@@ -5,7 +5,7 @@ import { askGeminiFitnessCoach } from './ai.js';
 export async function handleIncomingCommand(senderPhone, messageText) {
   const text = (messageText || '').trim();
   const lower = text.toLowerCase();
-  const member = gymDB.getMemberByPhone(senderPhone);
+  const member = await gymDB.getMemberByPhone(senderPhone);
   const memberName = member ? member.name : 'Bro';
   const gymInfo = gymDB.getGymInfo();
 

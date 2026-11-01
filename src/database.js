@@ -1,159 +1,121 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createClient } from '@libsql/client';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, '../data/gym_database.json');
+const TURSO_URL = process.env.TURSO_DATABASE_URL || 'libsql://arceus-veeraharikumaran2007-sudo.aws-ap-south-1.turso.io';
+const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM1NDY3NTgsImlkIjoiMDFhMTk3YjYtMTcwMS03MjEzLTk1ZGUtOThkYWFkODhiMzY4Iiwia2lkIjoiSFJRaXItR0tpX2o4cml0TDJaWHJxNkl1WjVWRUc4eEQ1d19LUGp3NVQybyIsInJpZCI6IjA0MGU3YzgyLTg1YWMtNGEyOS05MWRmLTNmZDg3YWQ3M2I0NCJ9.FgoOBUh_PH2opEmql6CYuImIMZVa1oGpS7IzNQ2lr_ly2N-0MuWrG5lF4JBbMwXurefHoOvkwUEDYIqa_HCvCg';
 
-// Ensure data folder exists
-const dataDir = path.dirname(DB_FILE);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-// Initial default schema if file doesn't exist
-if (!fs.existsSync(DB_FILE)) {
-  const initialData = {
-    gymInfo: {
-      name: "Arceus Fitness Studio",
-      timing: "Mon - Sat: 5:30 AM to 10:30 PM | Sun: 6:00 AM to 12:00 PM",
-      contact: "9876543210",
-      upi: "arceusgym@upi"
-    },
-    members: [
-      {
-        id: "101",
-        name: "Arun Kumar",
-        phone: "919876543210",
-        dob: "11-01", // MM-DD for birthday wish
-        joinDate: "2026-01-15",
-        expiryDate: "2026-11-05",
-        feesStatus: "PAID",
-        feesAmount: 1500,
-        streakDays: 14,
-        lastPunchDate: "2026-11-01"
-      }
-    ],
-    attendanceLogs: [],
-    feeTransactions: []
-  };
-  fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
-}
+export const turso = createClient({
+  url: TURSO_URL,
+  authToken: TURSO_AUTH_TOKEN
+});
 
 class GymDatabase {
   constructor() {
-    this.filePath = DB_FILE;
-  }
-
-  _read() {
-    try {
-      const content = fs.readFileSync(this.filePath, 'utf-8');
-      return JSON.parse(content);
-    } catch (e) {
-      console.error('Error reading gym database:', e);
-      return { gymInfo: {}, members: [], attendanceLogs: [], feeTransactions: [] };
-    }
-  }
-
-  _write(data) {
-    try {
-      fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
-    } catch (e) {
-      console.error('Error writing gym database:', e);
-    }
+    this.client = turso;
   }
 
   getGymInfo() {
-    return this._read().gymInfo;
+    return {
+      name: "Arceus Fitness Studio",
+      timing: "Mon - Sat: 5:30 AM to 10:30 PM | Sun: 6:00 AM to 12:00 PM",
+      contact: "7448449679",
+      upi: "arceusgym@upi"
+    };
   }
 
-  getAllMembers() {
-    return this._read().members || [];
-  }
-
-  getMemberByPhone(phone) {
+  // 1. Get Member by Phone
+  async getMemberByPhone(phone) {
     const cleaned = String(phone).replace(/\D/g, '');
-    const members = this.getAllMembers();
-    return members.find(m => {
-      const mPhone = String(m.phone).replace(/\D/g, '');
-      return mPhone.endsWith(cleaned) || cleaned.endsWith(mPhone);
+    const result = await this.client.execute({
+      sql: `SELECT * FROM gym_members WHERE phone LIKE ? OR ? LIKE ('%' || phone)`,
+      args: [`%${cleaned}%`, cleaned]
     });
+    return result.rows[0] || null;
   }
 
-  getMemberById(id) {
-    const members = this.getAllMembers();
-    return members.find(m => String(m.id) === String(id));
+  // 2. Get Member by ID
+  async getMemberById(id) {
+    const result = await this.client.execute({
+      sql: `SELECT * FROM gym_members WHERE id = ?`,
+      args: [String(id)]
+    });
+    return result.rows[0] || null;
   }
 
-  saveMember(member) {
-    const db = this._read();
-    const index = db.members.findIndex(m => String(m.id) === String(member.id));
-    if (index >= 0) {
-      db.members[index] = { ...db.members[index], ...member };
-    } else {
-      db.members.push(member);
-    }
-    this._write(db);
+  // 3. Save / Update Member
+  async saveMember(member) {
+    await this.client.execute({
+      sql: `INSERT INTO gym_members (id, name, phone, dob, join_date, expiry_date, fees_status, fees_amount, streak_days) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET 
+              name = excluded.name,
+              phone = excluded.phone,
+              dob = excluded.dob,
+              expiry_date = excluded.expiry_date,
+              fees_status = excluded.fees_status,
+              fees_amount = excluded.fees_amount`,
+      args: [
+        String(member.id),
+        member.name,
+        member.phone,
+        member.dob || '01-01',
+        member.joinDate || new Date().toISOString().split('T')[0],
+        member.expiryDate || '2026-12-01',
+        member.feesStatus || 'PAID',
+        member.feesAmount || 1500,
+        member.streakDays || 0
+      ]
+    });
     return member;
   }
 
-  // 1. Find all members who have Birthday Today
-  getTodaysBirthdays() {
+  // 4. Find Today's Birthdays (Runs at 8 AM)
+  async getTodaysBirthdays() {
     const now = new Date();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     const todayMMDD = `${mm}-${dd}`;
 
-    const members = this.getAllMembers();
-    return members.filter(m => m.dob && m.dob.endsWith(todayMMDD));
+    const result = await this.client.execute({
+      sql: `SELECT * FROM gym_members WHERE dob LIKE ?`,
+      args: [`%${todayMMDD}`]
+    });
+    return result.rows;
   }
 
-  // 2. Find members whose fees expire in X days
-  getExpiringMembers(daysBefore = 3) {
-    const today = new Date();
+  // 5. Find Expiring Members (3 Days Before)
+  async getExpiringMembers(daysBefore = 3) {
     const targetDate = new Date();
-    targetDate.setDate(today.getDate() + daysBefore);
+    targetDate.setDate(targetDate.getDate() + daysBefore);
     const targetStr = targetDate.toISOString().split('T')[0];
 
-    const members = this.getAllMembers();
-    return members.filter(m => m.expiryDate === targetStr && m.feesStatus === 'PAID');
-  }
-
-  // 3. Find members who haven't visited in X days
-  getInactiveMembers(daysThreshold = 3) {
-    const today = new Date();
-    const members = this.getAllMembers();
-    
-    return members.filter(m => {
-      if (!m.lastPunchDate) return false;
-      const last = new Date(m.lastPunchDate);
-      const diffTime = Math.abs(today - last);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays >= daysThreshold;
+    const result = await this.client.execute({
+      sql: `SELECT * FROM gym_members WHERE expiry_date = ? AND fees_status = 'PAID'`,
+      args: [targetStr]
     });
+    return result.rows;
   }
 
-  // 4. Record Biometric Punch & Streak
-  recordPunch(id, punchTime = new Date()) {
-    const db = this._read();
-    const member = db.members.find(m => String(m.id) === String(id));
+  // 6. Record Biometric Punch & Attendance
+  async recordPunch(id, punchTime = new Date()) {
+    const member = await this.getMemberById(id);
     if (!member) return null;
 
     const todayStr = punchTime.toISOString().split('T')[0];
-    if (member.lastPunchDate !== todayStr) {
-      member.streakDays = (member.streakDays || 0) + 1;
-      member.lastPunchDate = todayStr;
+    let newStreak = (member.streak_days || 0) + 1;
+
+    if (member.last_punch_date !== todayStr) {
+      await this.client.execute({
+        sql: `UPDATE gym_members SET streak_days = ?, last_punch_date = ? WHERE id = ?`,
+        args: [newStreak, todayStr, String(id)]
+      });
     }
 
-    db.attendanceLogs.push({
-      memberId: id,
-      name: member.name,
-      timestamp: punchTime.toISOString()
+    await this.client.execute({
+      sql: `INSERT INTO gym_attendance (member_id, member_name, punch_time, status) VALUES (?, ?, ?, ?)`,
+      args: [String(id), member.name, punchTime.toISOString(), 'VERIFIED']
     });
 
-    this._write(db);
-    return member;
+    return { ...member, streak_days: newStreak, last_punch_date: todayStr };
   }
 }
 

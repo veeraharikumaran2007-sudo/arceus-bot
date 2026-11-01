@@ -45,7 +45,7 @@ class AutomatedScheduler {
   async dispatchBirthdayWishes(todayStr) {
     if (waService.connectionStatus !== 'connected') return;
 
-    const bdayMembers = gymDB.getTodaysBirthdays();
+    const bdayMembers = await gymDB.getTodaysBirthdays();
     for (const member of bdayMembers) {
       const key = `${todayStr}_${member.id}`;
       if (!this.sentBirthdaysToday.has(key)) {
@@ -65,7 +65,7 @@ class AutomatedScheduler {
   async dispatchExpiryWarnings(todayStr) {
     if (waService.connectionStatus !== 'connected') return;
 
-    const expiringMembers = gymDB.getExpiringMembers(3);
+    const expiringMembers = await gymDB.getExpiringMembers(3);
     for (const member of expiringMembers) {
       const key = `${todayStr}_${member.id}`;
       if (!this.sentRemindersToday.has(key)) {
