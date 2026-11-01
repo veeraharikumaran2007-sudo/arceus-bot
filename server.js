@@ -1,0 +1,50 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { waService } from './src/whatsapp.js';
+import { router as apiRouter } from './src/routes.js';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve Static Frontend Dashboard
+app.use(express.static(path.join(__dirname, 'src/public')));
+
+// Mount API routes
+app.use('/api', apiRouter);
+
+// Start WhatsApp Bot & Server
+async function startServer() {
+  console.log('----------------------------------------------------');
+  console.log('⚡ Starting Arceus Bot Engine...');
+  console.log('----------------------------------------------------');
+
+  try {
+    // Initialize WhatsApp connection
+    await waService.init();
+
+    app.listen(PORT, () => {
+      console.log(`\n🚀 Arceus Bot Server is LIVE!`);
+      console.log(`🔗 Dashboard: http://localhost:${PORT}`);
+      console.log(`🔌 API Base:  http://localhost:${PORT}/api\n`);
+      console.log('Press Ctrl+C to stop.');
+    });
+  } catch (error) {
+    console.error('❌ Failed to start Arceus Bot:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

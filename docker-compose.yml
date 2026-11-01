@@ -1,0 +1,12 @@
+services:
+  arceus-bot:
+    build: .
+    container_name: arceus-gym-bot
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./auth_info:/app/auth_info
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
